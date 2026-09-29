@@ -18,7 +18,7 @@ Production-oriented Telegram bot based on the flows in `ira_telegram_bot_complet
 - seven-tab Google Sheets mirror: `Users`, `Events`, `Trials`, `Questions`, `Follow_up`, `Dashboard`, `Config`
 - privacy notice and user-initiated deletion
 - tracked Tilda redirects with UTM fields and a non-personal `bot_ref`
-- Vercel cron endpoints and GitHub CI
+- protected scheduler endpoints, GitHub Actions scheduling, and GitHub CI
 
 Unset media, descriptions, prices, events, offers, and sales links remain hidden until configured.
 
@@ -30,7 +30,7 @@ Telegram webhook
       ▼
 Vercel /api/telegram/webhook ─── PostgreSQL
       │                              │
-      ├── Telegram Bot API           ├── trial scheduler
+      ├── Telegram Bot API           ├── GitHub Actions scheduler
       ├── admin question chat        ├── event history
       └── tracked Tilda links        └── Google Sheets mirror
 ```
@@ -105,15 +105,22 @@ Merely being present in the group does not grant reply authorization.
 ## Vercel and GitHub deployment
 
 1. Create a private GitHub repository and push this project.
-2. Import it into a Vercel Pro team. Connect `main` as the production branch.
+2. Import it into Vercel. Connect `main` as the production branch.
 3. Add a managed PostgreSQL integration and all environment variables to Production.
 4. Deploy once.
 5. Pull production variables locally (`vercel env pull .env.local --environment=production`) or set them securely in your shell, then run migrations and seed.
 6. Set `PUBLIC_BASE_URL` to the final production domain and redeploy.
 7. Run `npm run telegram:set-webhook` once.
-8. Verify `/api/health`, then send `/start` to the bot.
+8. In GitHub repository settings, create the Actions secret `CRON_SECRET` with the same value used by Vercel, and the Actions variable `BOT_BASE_URL` with the production origin.
+9. Verify `/api/health`, manually run the **Bot scheduler** workflow once, then send `/start` to the bot.
 
 Vercel Preview deployments should use a separate test bot and database. Do not point the production Telegram webhook at a preview URL.
+
+### Free-tier scheduling
+
+The repository uses GitHub Actions every five minutes because Vercel Hobby only supports daily cron jobs. GitHub scheduled workflows can be delayed during periods of high load, so trial messages are not guaranteed to arrive at an exact minute. The database claims each touch idempotently, and a later run safely catches up. Upgrade to Vercel Pro or a durable workflow provider if precise delivery becomes important.
+
+On Vercel Hobby, deployments authored by other private-repository collaborators may be restricted. Collaborators can still work through pull requests; the project owner can merge/deploy until the project moves to a Pro team.
 
 ## Updating content
 

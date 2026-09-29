@@ -1,0 +1,47 @@
+name: Bot scheduler
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+    - cron: "*/30 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ira-bot-scheduler
+  cancel-in-progress: false
+
+jobs:
+  deliver:
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.schedule == '*/5 * * * *' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Deliver due trial messages
+        env:
+          BOT_BASE_URL: ${{ vars.BOT_BASE_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          test -n "$BOT_BASE_URL"
+          test -n "$CRON_SECRET"
+          curl --fail-with-body --retry 2 --retry-all-errors \
+            --max-time 60 \
+            -H "Authorization: Bearer $CRON_SECRET" \
+            "$BOT_BASE_URL/api/cron/trials"
+
+  sync-sheets:
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.schedule == '*/30 * * * *' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Mirror data to Google Sheets
+        env:
+          BOT_BASE_URL: ${{ vars.BOT_BASE_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          curl --fail-with-body --retry 2 --retry-all-errors \
+            --max-time 60 \
+            -H "Authorization: Bearer $CRON_SECRET" \
+            "$BOT_BASE_URL/api/cron/sync-sheets"
