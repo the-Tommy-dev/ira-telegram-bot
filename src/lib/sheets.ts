@@ -32,7 +32,7 @@ async function ensureTabs(api: ReturnType<typeof client>, spreadsheetId: string)
   const existing = new Set(current.data.sheets?.map((sheet) => sheet.properties?.title).filter(Boolean));
   const requests = tabNames
     .filter((title) => !existing.has(title))
-    .map((title) => ({ addSheet: { properties: { title, frozenRowCount: 1 } } }));
+    .map((title) => ({ addSheet: { properties: { title, gridProperties: { frozenRowCount: 1 } } } }));
   if (requests.length) await api.spreadsheets.batchUpdate({ spreadsheetId, requestBody: { requests } });
 }
 
